@@ -1,0 +1,56 @@
+﻿<job id="main">
+	<script language="JScript">
+        function SendSms(port, phone, message)
+        {
+            var fso = new ActiveXObject("Scripting.FileSystemObject");
+            
+            var com = fso.OpenTextFile("\\\\.\\COM14", 2);
+
+            var pdu = "001100";
+            
+            // Длинна номера получателя
+            pdu = pdu + String("00").substr(0, 2 - Number(phone.length).toString(16).length) + Number(phone.length).toString(16).toUpperCase();
+            
+            // Интернациональность получателя
+            pdu = pdu + "91";
+            
+            // Телефон получателя
+            phone = (phone.length % 2 > 0) ? phone + "F" : phone;
+            
+            for (var i = 0; i < phone.length / 2; i++)
+            {
+                pdu = pdu + phone.charAt(i * 2 + 1) + phone.charAt(i * 2);
+            }
+            
+            // Идентификатор протокола 00 и Cхема кодирования данных в поле данных 08 - кириллическое
+            pdu = pdu + "0008C1";
+            
+            // Длина сообщения
+            pdu = pdu + String("00").substr(0, 2 - Number(message.length * 2).toString(16).length) + Number(message.length * 2).toString(16);
+            
+            // Текст сообщения в формате UCS2
+            for (var i = 0; i < message.length; i++)
+            {
+                pdu = pdu + String("0000").substr(0, 4 - message.charCodeAt(i).toString(16).length) + message.charCodeAt(i).toString(16);
+            }
+
+            com.Write("AT+CMGF=0\x0D\x0A");
+            com.Write("AT+CMGS=" + Number(pdu.length / 2 - 1).toString() + "\x0D\x0A");
+            com.Write(pdu + "\x0D\x0A\x1A");
+            com.Close();
+        };
+        
+		SendSms("14", "+79522906052", "TEST");
+
+        
+        var wmi = GetObject("winmgmts:\\\\.\\root\\cimv2")
+
+        var objWmgtItems= wmi.ExecQuery("select * from CIM_POTSModem")
+
+        for (var enumItems = new Enumerator(objWmgtItems); !enumItems.atEnd(); enumItems.moveNext()) 
+        {
+            SendSms(enumItems.item().AttachedTo, "+79522906052", "TEST");
+        }
+        
+	</script>
+</job>
